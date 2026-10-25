@@ -14,3 +14,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_wtcfe")
+
+[node name="Label" type="Label" parent="Node/Control" unique_id=2115672644]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
