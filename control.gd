@@ -2,6 +2,14 @@ extends Control
 
 @onready var label: Label = $Label
 
+const WIN_SCORE := 100
+const GREEN_GROW := 0.002
+const YELLOW_GROW := 0.004
+const GREEN_SHRINK := 0.001
+const YELLOW_SHRINK := 0.002
+const MAX_SCALE := 4.6
+const GOLD_HALF := 0.01
+
 var pos := 0.0
 var dir := 1.0
 var speed := 1.2
@@ -11,6 +19,8 @@ var score := 0
 var fatigue := 0.0
 var msg_time := 0.0
 var dip := 0.0
+var gold_unlocked := false
+var only_gold := true
 
 func _ready():
 	label.add_theme_font_size_override("font_size", 40)
@@ -23,6 +33,7 @@ func restart(message: String = ""):
 	yellow_half = 0.10
 	score = 0
 	fatigue = 0.0
+	only_gold = true
 	if message != "":
 		label.text = message
 		msg_time = 2.0
@@ -52,20 +63,36 @@ func _input(e):
 	var t = create_tween()
 	t.tween_property(self, "dip", 0.0, 0.25)
 	var d = abs(pos - 0.5)
-	if d <= green_half:
+	var fatigue_add := 0.5
+	var is_gold: bool = gold_unlocked and d <= GOLD_HALF
+	if not is_gold:
+		only_gold = false
+	if is_gold:
+		score += 2
+		fatigue_add = 0.0
+		if score >= 0:
+			green_half += GREEN_GROW
+			yellow_half += YELLOW_GROW
+	elif d <= green_half:
 		score += 1
 		if score >= 0:
-			green_half += 0.005
-			yellow_half += 0.01
+			green_half += GREEN_GROW
+			yellow_half += YELLOW_GROW
 	elif d > yellow_half:
 		score -= 1
-		green_half = max(0.03, green_half - 0.002)
-		yellow_half = max(0.10, yellow_half - 0.004)
-	fatigue += 0.5
+		green_half = max(0.03, green_half - GREEN_SHRINK)
+		yellow_half = max(0.10, yellow_half - YELLOW_SHRINK)
+	fatigue += fatigue_add
 	if fatigue >= 1.0:
 		restart("you tired and collapse. restarty time")
-	elif score >= 100:
-		restart("congrats you are win")
+	elif score >= WIN_SCORE:
+		var msg := "congrats you are win"
+		if only_gold:
+			msg = "woah you so fast reaction such good job yay!!"
+		elif not gold_unlocked:
+			msg = "congrats you are win also u get special challenge yay"
+		gold_unlocked = true
+		restart(msg)
 	elif msg_time <= 0.0:
 		label.text = str(score)
 
@@ -79,9 +106,11 @@ func _draw():
 	draw_rect(Rect2(x, y, w, h), Color.RED)
 	draw_rect(Rect2(x + (0.5 - yh) * w, y, yh * 2.0 * w, h), Color.ORANGE)
 	draw_rect(Rect2(x + (0.5 - gh) * w, y, gh * 2.0 * w, h), Color.GREEN)
+	if gold_unlocked:
+		draw_rect(Rect2(x + (0.5 - GOLD_HALF) * w, y, GOLD_HALF * 2.0 * w, h), Color.GOLD)
 	draw_rect(Rect2(x + pos * w - 2, y - 8, 4, h + 16), Color.WHITE)
 
-	var s: float = 0.6 + max(score, 0) * 0.015
+	var s: float = 0.6 + (float(max(score, 0)) / WIN_SCORE) * (MAX_SCALE - 0.6)
 	var gx := size.x * 0.5
 	var gy := size.y * 0.5 + 250.0
 	var body_len := 140.0 * s
